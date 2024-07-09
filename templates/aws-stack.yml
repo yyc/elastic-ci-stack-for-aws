@@ -1324,7 +1324,8 @@ Resources:
             'Fn::ForEach::Buckets':
               - InstanceTypeIdentifier
               - !Split [ ",", !Join [ ",", [ !Ref InstanceTypes, "", "", "" ] ] ]
-              - InstanceType: "${InstanceTypeIdentifier}"
+              - ${InstanceTypeIdentifier}: 
+                  InstanceType: "${InstanceTypeIdentifier}"
       MinSize: !Ref MinSize
       MaxSize: !Ref MaxSize
       Cooldown: 60
