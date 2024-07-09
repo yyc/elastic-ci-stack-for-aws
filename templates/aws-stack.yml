@@ -21,7 +21,9 @@ Description: "Buildkite stack %v"
 # * VPC Design: https://buildkite.com/docs/agent/v3/aws/vpc
 # * CloudFormation Service Role: https://buildkite.com/docs/agent/v3/elastic-ci-aws/cloudformation-service-role
 
-Transform: AWS::Serverless-2016-10-31
+Transform: 
+  - AWS::LanguageExtensions
+  - AWS::Serverless-2016-10-31
 
 Metadata:
   AWS::CloudFormation::Interface:
@@ -299,8 +301,8 @@ Parameters:
     Type: String
     Default: t3.large
     MinLength: 1
-    AllowedPattern: "^[\\w-\\.]+(,[\\w-\\.]*){0,3}$"
-    ConstraintDescription: "must contain 1-4 instance types separated by commas. No space before/after the comma."
+    AllowedPattern: "^[\\w-\\.]+(,[\\w-\\.]*)*$"
+    ConstraintDescription: "must contain 1 or more instance types separated by commas. No space before/after the comma."
 
   MaxSize:
     Description: Maximum number of instances
@@ -657,15 +659,6 @@ Conditions:
 
     UseDefaultRootVolumeName:
       !Equals [ !Ref RootVolumeName, "" ]
-
-    UseInstanceType2:
-      !Not [ !Equals [ !Select [ "1", !Split [ ",", !Join [ ",", [ !Ref InstanceTypes, "", "", "" ] ] ] ], ""] ]
-
-    UseInstanceType3:
-      !Not [ !Equals [ !Select [ "2", !Split [ ",", !Join [ ",", [ !Ref InstanceTypes, "", "", "" ] ] ] ], ""] ]
-
-    UseInstanceType4:
-      !Not [ !Equals [ !Select [ "3", !Split [ ",", !Join [ ",", [ !Ref InstanceTypes, "", "", "" ] ] ] ], ""] ]
 
     UseManagedPolicyARN:
       !Not [ !Equals [ !Join [ "", !Ref ManagedPolicyARNs ], "" ] ]
@@ -1328,19 +1321,10 @@ Resources:
             LaunchTemplateId: !Ref AgentLaunchTemplate
             Version: !GetAtt "AgentLaunchTemplate.LatestVersionNumber"
           Overrides:
-          - InstanceType: !Select [ "0", !Split [ ",", !Join [ ",", [ !Ref InstanceTypes, "", "", "" ] ] ] ]
-          - !If
-            - UseInstanceType2
-            - InstanceType: !Select [ "1", !Split [ ",", !Join [ ",", [ !Ref InstanceTypes, "", "", "" ] ] ] ]
-            - !Ref "AWS::NoValue"
-          - !If
-            - UseInstanceType3
-            - InstanceType: !Select [ "2", !Split [ ",", !Join [ ",", [ !Ref InstanceTypes, "", "", "" ] ] ] ]
-            - !Ref "AWS::NoValue"
-          - !If
-            - UseInstanceType4
-            - InstanceType: !Select [ "3", !Split [ ",", !Join [ ",", [ !Ref InstanceTypes, "", "", "" ] ] ] ]
-            - !Ref "AWS::NoValue"
+            'Fn::ForEach::Buckets':
+              - InstanceTypeIdentifier
+              - !Split [ ",", !Join [ ",", [ !Ref InstanceTypes, "", "", "" ] ] ]
+              - InstanceType: "${InstanceTypeIdentifier}"
       MinSize: !Ref MinSize
       MaxSize: !Ref MaxSize
       Cooldown: 60
